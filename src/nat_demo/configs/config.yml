@@ -1,0 +1,48 @@
+llms:
+  nat_llm:
+    _type: openai
+    api_key: $API_KEY
+    base_url: $BASE_URL
+    model_name: $MODEL_NAME
+    temperature: 0.1
+
+
+functions:
+  weather_tool:
+    _type: weather_tool
+  langgraph_time_agent:
+    _type: langgraph_time_agent
+    llm_name: nat_llm
+
+workflow:
+  _type: react_agent
+  llm_name: nat_llm
+  tool_names: [weather_tool, langgraph_time_agent]
+  parse_agent_response_max_retries: 3
+  additional_instructions: "CRITICAL RULE: Your Final Answer MUST include the current time for every city mentioned. If a tool returns current time information, you MUST copy it into your Final Answer verbatim. Never omit current time from your response."
+  verbose: true
+
+general:
+  telemetry:
+    tracing:
+      langfuse:
+        _type: langfuse
+        endpoint: http://localhost:3011/api/public/otel/v1/traces
+        public_key: pk-lf-local
+        secret_key: sk-lf-local
+
+eval:
+  general:
+    output:
+      dir: ./.tmp/evals
+      cleanup: false  # Keep results for inspection
+    dataset:
+      _type: json
+      file_path: data/simple_eval.json
+
+  evaluators:
+    # Check if the answer is accurate
+    answer_accuracy:
+      _type: ragas
+      metric: AnswerAccuracy
+      llm_name: nat_llm
